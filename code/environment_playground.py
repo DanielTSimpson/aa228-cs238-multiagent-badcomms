@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 import time
 
+# DISCLAIMER: THIS WAS COMPLETELY AI GENERATED AS A TOY SCRIPT
+
 class FireSearchEnv(Env):
     def __init__(self, grid_size=5):
         self.grid_size = grid_size
