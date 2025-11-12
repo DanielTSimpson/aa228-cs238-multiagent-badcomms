@@ -1,0 +1,83 @@
+Meeting with Mahdi @ SISL:
+
+
+General Advice:
+- Pick a toy problem: It's okay to have a 5x5 or 10x10 grid. Don't worry about all the fidelity and detail. Only a few agents
+
+- There are three categories of paper contributions: Applications, Algorithms, and Theory. Choose one to guide the essence of what you are trying to accomplish to the future. It could be just tweaking an existing algorithm, but applying to a toy problem. Our proposal is already towards an algorithm paper.
+
+- Easiest thing: take an existing algorithm and modify it to allow you to get better performance that what you've been dealing with. 
+
+- Identify what kind of communication failure you are handling. 
+
+- Code could be up to 500 lines of code - short short short 
+
+- Doing a manned kingpin with an set unmanned surveyors, you could do a fascinating application of human-autonomy relations, but it does add complexity. 
+
+
+Defining our (PO)MDP:
+- DDN - dynamics decision network
+
+- You just take an MDP and just make the action node a vector of action.
+
+- Comms problems are inherently partially observable
+
+- To make the MDP a POMDP, we add an observation node (which is also a vector for every agent in the system)
+
+- Observations could be about the agent itself, about other agents, or the environment
+
+- You could make a POMDP about a belief MDP (where you pick some MDP algorithm and assume the observations you've made are indeed the state)
+
+
+There are 3 categories of comm failures:
+	a. Delayed communicator - your information is there, but it is latent from the actual delay.
+	b. Intermittent communication (the genre Mahdi works the most with) - there is a probability that two agents could communicate. 
+	c. Costly communication - using a communication action adds a penalty to the reward.
+	- For the delayed case, you would have to rapidly update your belief state and treat whenever you get data as the ground truth. If you made the wrong call, you'd want to redo the predictive analysis. 
+	- Variable communication losses could be a novel approach. 
+
+
+Decide whether to do learning or planning:
+	Planning is everything we've done so far.
+	Learning is online planning and would take longer to implement.
+
+
+Methods/Algos:
+	Value iteration (Dynamic Programming great for small maps)
+	Policy Iteration (Dynamic Programming great for small maps)
+	MCTS is great for scalability 
+		- This is where you'd want to tweak some things to experiment with what algorithms work best
+
+
+There are centralized and decentralized:
+	Decentralized means three MCTS for each of three agents. Three separate MDPs that work independently (worse results, but would be faster)
+	Centralized means all information from all agents go into one MDP. This one will generally be better (from a performance perspective). 
+
+	- You could swap between decentralized and centralized. The environment could demand whether you are centralized or decentralized. When you have a comms loss, you can't make joint actions because each drone would make its own action without the other knowing - which is inherently decentralized. Maybe you have a predictive model to imbue some centralization.
+	- 2 agents is a lot easier than 3 agents. 3 agents become a nightmare. With 2 you get 2 cases: centralized or decentralized. With 3 you get 2^(3-1) = 8 centralized-decentralized combinations. With multiagent systems, we have NEXP time complexity (worse than EXP, worse than NP, worse than P), which is the worst one.
+
+
+Actions:
+- Choose a failure mode
+- Choose the number of agents (start with 1 and move to 2 as MDP)
+- Choose kingpin vs surveyors vs only surveyors
+- Choose a method 
+- Read up on the method(s) (brainstorm tweaking)
+- Read up on JACE paper
+- Read through a literature review over the break
+- Define the wildfire problem (single wildfire spot for now)
+- Start with a small grid world
+- Start with a simple objective (e.g. find the fire)
+
+
+Epilogue:
+- For future research, you could look into MARL-COM (multi agent reinforcement learning with communications). This would be extending the work we would've done in planning into learning. 
+
+
+Tips:
+- Don't add a bunch of stuff to your algorithms (this is software creep)
+- With algorithms it is easy to get caught up in the weeds. Do only one change per implementation. Don't try to stack changes to a method, this will add confusion and cost lots of time.
+- Don't just chuck algos from POMDP.jl into a script, be intimate with your understanding of each method. Read the paper, read the algorithm. Go to the basics. This would be like an ablation study
+
+
+
