@@ -4,6 +4,7 @@ Represents probability distributions over fire locations
 """
 import numpy as np
 from copy import deepcopy
+import config as cfg
 
 
 class BeliefState:

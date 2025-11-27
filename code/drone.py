@@ -5,6 +5,7 @@ Implements intelligent decision-making for fire search and extinguish
 import numpy as np
 from copy import deepcopy
 from belief_state import BeliefState
+import config as cfg
 
 
 class Drone:
@@ -19,7 +20,7 @@ class Drone:
         4: Move Right
         5: Communicate
     """
-    def __init__(self, drone_id, grid_size, num_drones, window_size=3, time=0, dt=0.05):
+    def __init__(self, drone_id, grid_size, num_drones=cfg.NUM_DRONES, window_size=cfg.OBSERVATION_WINDOW_SIZE, time=cfg.INITIAL_TIME, dt=cfg.TIME_STEP):
         self.drone_id = drone_id
         self.grid_size = grid_size
         self.window_size = window_size
@@ -51,9 +52,9 @@ class Drone:
                 }
         
         # Dec-POMDP parameters
-        self.gamma = 0.95  # Discount factor
-        self.communication_threshold = 0.3  # Communicate when uncertainty is high
-        self.exploration_bonus = 2.0  # Bonus for exploring new cells
+        self.gamma = cfg.GAMMA  # Discount factor
+        self.communication_threshold = cfg.COMMUNICATION_THRESHOLD  # Communicate when uncertainty is high
+        self.exploration_bonus = cfg.EXPLORATION_BONUS  # Bonus for exploring new cells
 
     @property
     def x(self):

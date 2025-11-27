@@ -13,7 +13,7 @@ INITIAL_TIME = 0.0
 TIME_STEP = 0.05
 
 # Simulation parameters
-MAX_SIMULATION_TIME = 10.0
+MAX_SIMULATION_TIME = 20.0
 STATUS_UPDATE_INTERVAL = 20
 RENDER_PAUSE = 0.1
 
@@ -30,10 +30,6 @@ STAY_COST = 0.0
 # Communication parameters
 COMMUNICATION_NOISE = 0.05
 UNCERTAINTY_GROWTH_RATE = 0.1
-
-# Search strategy parameters
-SEARCH_COMMUNICATION_INTERVAL = 30
-FIRE_FOUND_COMMUNICATION_INTERVAL = 10
 
 # Rendering parameters
 FIGURE_SIZE = (10, 10)  # Size of the matplotlib figure

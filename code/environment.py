@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 import matplotlib.patches as patches
 from gymnasium import Env
+import config as cfg
+
 
 
 class SearchEnv(Env):
@@ -18,15 +20,15 @@ class SearchEnv(Env):
     - Red: Fire
     - Blue/Green/etc: Drones
     """
-    def __init__(self, grid_size=10):
+    def __init__(self, grid_size=cfg.FIGURE_SIZE):
         self.grid_size = grid_size
         self.fig, self.ax = None, None
         self.fire_pos = np.random.randint(0, self.grid_size, size=2)
         self.patches = []
         
         # Cost parameters
-        self.communication_cost = 10.0
-        self.movement_cost = 1.0
+        self.communication_cost = cfg.COMMUNICATION_COST
+        self.movement_cost = cfg.MOVEMENT_COST
         
         # Tracking
         self.total_cost = 0.0
@@ -97,8 +99,7 @@ class SearchEnv(Env):
         for idx, drone in enumerate(drones):
             grid[tuple(drone.position)] = idx + 2  # Drones
 
-        cmap = colors.ListedColormap(['white', 'red', 'blue', 'green', 
-                                       'orange', 'purple'])
+        cmap = colors.ListedColormap(cfg.GRID_COLORS)
         bounds = [0, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5]
         norm = colors.BoundaryNorm(bounds, cmap.N)
 
@@ -139,8 +140,8 @@ class SearchEnv(Env):
                 (corner_y, corner_x),
                 drone.window_size,
                 drone.window_size,
-                linewidth=2,
-                edgecolor='black',
+                linewidth=cfg.WINDOW_LINE_WIDTH,
+                edgecolor=cfg.WINDOW_EDGE_COLOR,
                 facecolor='none'
             )
             self.ax.add_patch(rectangle)

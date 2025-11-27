@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from drone import Drone
 from environment import SearchEnv
+import config as cfg
 
 
 def initialize_drones(num_drones, grid_size, env, t_0=0):
@@ -129,20 +130,11 @@ def run_simulation(grid_size=10, num_drones=2, t_f=10, dt=0.05,
 
 
 if __name__ == '__main__':
-    # Simulation parameters
-    GRID_SIZE = 10
-    NUM_DRONES = 2
-    MAX_TIME = 10.0  # seconds
-    TIME_STEP = 0.05  # seconds
-    STATUS_INTERVAL = 20
-    RENDER_PAUSE = 0.1  # seconds between renders
-    
-    # Run the simulation
     run_simulation(
-        grid_size=GRID_SIZE,
-        num_drones=NUM_DRONES,
-        t_f=MAX_TIME,
-        dt=TIME_STEP,
-        status_interval=STATUS_INTERVAL,
-        render_pause=RENDER_PAUSE
+        grid_size=cfg.GRID_SIZE,
+        num_drones=cfg.NUM_DRONES,
+        t_f=cfg.MAX_SIMULATION_TIME,
+        dt=cfg.TIME_STEP,
+        status_interval=cfg.STATUS_UPDATE_INTERVAL,
+        render_pause=cfg.RENDER_PAUSE
     )
