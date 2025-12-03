@@ -5,6 +5,7 @@ Represents probability distributions over fire locations
 import numpy as np
 from copy import deepcopy
 import config as cfg
+from reward_function import compute_entropy
 
 
 class BeliefState:
@@ -51,16 +52,9 @@ class BeliefState:
     def get_entropy(self):
         """
         Calculate entropy of belief distribution (measure of uncertainty)
-        
-        Returns:
-            float: entropy value (higher = more uncertain)
         """
-        flat_belief = self.belief.flatten()
-        flat_belief = flat_belief[flat_belief > 0]
-        if len(flat_belief) == 0:
-            return 0.0
-
-        return -np.sum(flat_belief * np.log(flat_belief + 1e-10))
+        # Use shared utility to keep definitions consistent
+        return compute_entropy(self.belief)
     
     def get_most_likely_location(self):
         """
