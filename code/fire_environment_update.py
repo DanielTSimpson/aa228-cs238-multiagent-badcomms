@@ -5,6 +5,8 @@ from matplotlib import colors
 import matplotlib.patches as patches
 from copy import deepcopy
 
+from reward_function import global_reward, compute_entropy
+
 class BeliefState:
     """
     Represents a probability distribution over possible fire locations
@@ -45,7 +47,10 @@ class BeliefState:
         if len(flat_belief) == 0:
             return 0.0
         
-        return -np.sum(flat_belief * np.log(flat_belief + 1e-10))
+        # belief without compute_entropy function:
+        #return -np.sum(flat_belief * np.log(flat_belief + 1e-10))
+
+        return compute_entropy(self.belief)
     
     def get_most_likely_location(self):
         """Return the cell with highest probability"""
@@ -378,37 +383,74 @@ class SearchEnv(Env):
         self.time_to_extinguish = None
         self.total_communications = 0
 
+        # Per-step time penalty parameter for global reward function
+        self.kappa = 0.0
+
     def step(self, drones, actions):
-        """Execute actions and handle communication"""
+        """Execute actions, handle communication, and compute global reward."""
         telemetry_packets = []
-        step_cost = 0.0
-        
+        step_movement_cost = 0.0
+        comm_count = 0
+
+        # 0) Team belief BEFORE actions
+        prev_belief = self._get_team_belief(drones)
+
+        # 1) Execute each drone action (movement, local observation, time update)
         for drone, action in zip(drones, actions):
             packet = drone.action(action, self.fire_pos)
+
             if packet is not None:
                 telemetry_packets.append(packet)
-                step_cost += self.communication_cost
-                self.total_communications += 1
+                comm_count += 1
             elif action != 0:
-                step_cost += self.movement_cost
-        
+                step_movement_cost += self.movement_cost
+
+        # 2) Handle communication (merge beliefs)
         for packet in telemetry_packets:
             for drone in drones:
                 if drone.drone_id != packet['sender_id']:
                     drone.receive_telemetry(packet, communication_noise=0.05)
-        
+
+        # 3) Check for fire extinguished (unchanged)
         for drone in drones:
             if drone.x == self.fire_pos[0] and drone.y == self.fire_pos[1]:
                 if not self.fire_extinguished:
                     self.fire_extinguished = True
                     self.time_to_extinguish = drone.time
+                    total_step_cost = (
+                        step_movement_cost + self.communication_cost * comm_count
+                    )
                     print(f"FIRE EXTINGUISHED by Drone {drone.drone_id}!")
                     print(f"Time: {drone.time:.2f}s")
-                    print(f"Total Cost: {self.total_cost + step_cost:.2f}")
-                    print(f"Communications: {self.total_communications}")
-        
-        self.total_cost += step_cost
-        return step_cost, self.fire_extinguished
+                    print(
+                        f"Total Cost: {self.total_cost + total_step_cost:.2f}"
+                    )
+                    print(
+                        f"Communications: {self.total_communications + comm_count}"
+                    )
+
+        # Accumulate “real” costs for logging
+        self.total_communications += comm_count
+        self.total_cost += step_movement_cost + self.communication_cost * comm_count
+
+        # 4) Team belief AFTER actions + communication
+        next_belief = self._get_team_belief(drones)
+
+        # 5) Global reward from reward_function module
+        communicated = comm_count > 0
+
+        # Fold movement cost into the effective kappa for this step
+        effective_kappa = self.kappa + step_movement_cost
+
+        reward = global_reward(
+            prev_belief,
+            next_belief,
+            kappa=effective_kappa,
+            comm_cost=self.communication_cost,
+            communicated=communicated,
+        )
+
+        return reward, self.fire_extinguished
 
     def render(self, drones):
         grid = np.zeros((self.grid_size, self.grid_size))
@@ -474,6 +516,28 @@ class SearchEnv(Env):
             self.fig = None
 
 
+    # Helper function to get the team-level belief over fire location for global reward function
+    def _get_team_belief(self, drones):
+        """
+        Construct a team-level belief over fire location by averaging
+        individual drones' beliefs and normalizing.
+        Returns a 1D probability vector.
+        """
+        beliefs = [d.belief_state.belief for d in drones]
+        stacked = np.stack(beliefs, axis=0)            # shape: (num_drones, G, G)
+        team_belief = stacked.mean(axis=0)             # average over drones
+
+        # Normalize just in case of numerical drift
+        total = team_belief.sum()
+        if total > 0:
+            team_belief = team_belief / total
+        else:
+            # fallback: uniform if something went horribly wrong
+            team_belief = np.ones_like(team_belief) / team_belief.size
+
+        return team_belief.ravel()
+
+
 if __name__ == '__main__':
     t_0 = 0
     dt = 0.05
@@ -520,10 +584,11 @@ if __name__ == '__main__':
             action = drone.decide_action_pomdp()
             actions.append(action)
         
-        step_cost, fire_out = env.step(drones, actions)
+        reward, fire_out = env.step(drones, actions)
         
         if i % 20 == 0:
             print(f"\n--- Time step {i} (t={drones[0].time:.2f}s) ---")
+            print(f"Reward this step: {reward:.3f}")
             for drone in drones:
                 entropy = drone.belief_state.get_entropy()
                 explored_pct = len(drone.visited_cells) / (grid_size * grid_size) * 100
