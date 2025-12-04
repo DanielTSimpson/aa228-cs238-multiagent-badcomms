@@ -86,7 +86,7 @@ def run_simulation(grid_size=10, num_drones=2, t_f=10, dt=0.05,
     #fig = env.render(drones)
     #plt.savefig("InitialPositions.png")
     for i in range(N):
-        fig = env.render(drones)
+        #fig = env.render(drones)
         plt.pause(0.1)
         
         if env.fire_extinguished:
@@ -166,15 +166,15 @@ def plot_results(entropy1, entropy2, time, final_time, total_cost, total_comms, 
 
     plt.tight_layout()
     
-    plt.show(block=True)
-    plt.savefig(f"Config1Results_{N}.png")
+    #plt.show(block=True)
+    plt.savefig(f"ConfigResults_{N}.png")
     plt.close(fig)
 
 
 
 if __name__ == '__main__':
-    max_N = 1
-    filename_prefix = "Config1_"
+    max_N = 30
+    filename_prefix = "Config_"
     csv_filename = filename_prefix + 'results.csv'
     fieldnames = ['Trial #', 'Total Time', '# Comms', 'Total Cost']
 

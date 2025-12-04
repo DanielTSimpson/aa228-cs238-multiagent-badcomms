@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import norm
 
 # 1. Load the data from the CSV file
-filename = 'Config1_Results.csv'
+filename = 'Config_Results.csv'
 
 try:
     df = pd.read_csv(filename)
