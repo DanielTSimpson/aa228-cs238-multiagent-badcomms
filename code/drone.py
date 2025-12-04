@@ -7,20 +7,11 @@ from copy import deepcopy
 from belief_state import BeliefState
 import config as cfg
 
-
-class Drone:
+class Drone():
     """
     Dec-POMDP Agent with belief state and value-based decision making
-    
-    Actions:
-        0: Stay
-        1: Move Up
-        2: Move Down
-        3: Move Left
-        4: Move Right
-        5: Communicate
     """
-    def __init__(self, drone_id, grid_size, num_drones=cfg.NUM_DRONES, window_size=cfg.OBSERVATION_WINDOW_SIZE, time=cfg.INITIAL_TIME, dt=cfg.TIME_STEP):
+    def __init__(self, drone_id, grid_size, num_drones, window_size=3, time=0, dt=0.05):
         self.drone_id = drone_id
         self.grid_size = grid_size
         self.window_size = window_size
@@ -52,9 +43,9 @@ class Drone:
                 }
         
         # Dec-POMDP parameters
-        self.gamma = cfg.GAMMA  # Discount factor
-        self.communication_threshold = cfg.COMMUNICATION_THRESHOLD  # Communicate when uncertainty is high
-        self.exploration_bonus = cfg.EXPLORATION_BONUS  # Bonus for exploring new cells
+        self.gamma = 0.95  # Discount factor
+        self.communication_threshold = 0.3  # Communicate when uncertainty is high
+        self.exploration_bonus = 2.0  # Bonus for exploring new cells, promotes drones to move in unexplored directions
 
     @property
     def x(self):
@@ -69,24 +60,13 @@ class Drone:
         return [self.x, self.y, self.belief_state.fire_found, self.time]
 
     def observe(self, fire_pos):
-        """
-        Update belief based on observation
-        
-        Args:
-            fire_pos: (x, y) actual fire position
-            
-        Returns:
-            bool: True if fire was observed, False otherwise
-        """
-        x_check = (self.x - self.window_size // 2 <= fire_pos[0] <= 
-                   self.x + self.window_size // 2)
-        y_check = (self.y - self.window_size // 2 <= fire_pos[1] <= 
-                   self.y + self.window_size // 2)
+        """Update belief based on observation"""
+        x_check = (self.x - self.window_size // 2 <= fire_pos[0] <= self.x + self.window_size // 2)
+        y_check = (self.y - self.window_size // 2 <= fire_pos[1] <= self.y + self.window_size // 2)
         fire_observed = x_check and y_check
         
         # Update belief state
-        self.belief_state.update_with_observation(self.position, self.window_size, 
-                                                   fire_observed)
+        self.belief_state.update_with_observation(self.position, self.window_size, fire_observed)
         
         if fire_observed:
             print(f"Drone {self.drone_id} found fire at position {fire_pos}!")
@@ -95,12 +75,7 @@ class Drone:
         return fire_observed
 
     def create_telemetry_packet(self):
-        """
-        Creates telemetry packet with belief state
-        
-        Returns:
-            dict: packet containing drone state and beliefs
-        """
+        """Creates telemetry packet with belief state"""
         packet = {
             'sender_id': self.drone_id,
             'timestamp': self.time,
@@ -110,7 +85,7 @@ class Drone:
         }
         
         print(f"\n{'='*60}")
-        print(f"  TELEMETRY SENT by Drone {self.drone_id}")
+        print(f"TELEMETRY SENT by Drone {self.drone_id}")
         print(f"{'='*60}")
         print(f"  Time: {self.time:.2f}s")
         print(f"  Position: ({self.position[0]}, {self.position[1]})")
@@ -122,20 +97,14 @@ class Drone:
         return packet
 
     def receive_telemetry(self, packet, communication_noise=0.1):
-        """
-        Receive and merge belief states
-        
-        Args:
-            packet: telemetry packet from another drone
-            communication_noise: uncertainty in communication channel
-        """
+        """Receive and merge belief states"""
         sender_id = packet['sender_id']
         
         if sender_id == self.drone_id or sender_id not in self.beliefs:
             return
         
         print(f"\n{'─'*60}")
-        print(f"  TELEMETRY RECEIVED by Drone {self.drone_id} from Drone {sender_id}")
+        print(f"TELEMETRY RECEIVED by Drone {self.drone_id} from Drone {sender_id}")
         print(f"{'─'*60}")
         print(f"  Time: {packet['timestamp']:.2f}s")
         print(f"  Sender Position: ({packet['position'][0]}, {packet['position'][1]})")
@@ -158,10 +127,7 @@ class Drone:
         print(f"{'─'*60}\n")
 
     def update_beliefs(self, dt):
-        """
-        Update beliefs about other drones over time
-        Uncertainty increases without communication
-        """
+        """Update beliefs about other drones over time"""
         for drone_id in self.beliefs:
             time_since_update = self.time - self.beliefs[drone_id]['last_update_time']
             uncertainty_growth_rate = 0.1
@@ -171,27 +137,21 @@ class Drone:
     def compute_information_gain(self, next_position):
         """
         Compute expected information gain from moving to next_position
-        
-        Args:
-            next_position: (x, y) candidate position
-            
-        Returns:
-            float: expected information gain value
+        Based on reduction in belief entropy
         """
+        # Simulate observation at next position
         temp_belief = deepcopy(self.belief_state.belief)
         x, y = next_position
         
         # Calculate expected information gain
         observation_area = 0
-        for i in range(max(0, x - self.window_size // 2), 
-                      min(self.grid_size, x + self.window_size // 2 + 1)):
-            for j in range(max(0, y - self.window_size // 2), 
-                          min(self.grid_size, y + self.window_size // 2 + 1)):
+        for i in range(max(0, x - self.window_size // 2), min(self.grid_size, x + self.window_size // 2 + 1)):
+            for j in range(max(0, y - self.window_size // 2), min(self.grid_size, y + self.window_size // 2 + 1)):
                 observation_area += temp_belief[i, j]
         
-        # Information gain with exploration bonus
-        exploration_bonus = (self.exploration_bonus if 
-                           tuple(next_position) not in self.visited_cells else 0)
+        # Information gain is proportional to probability mass in observation area
+        # and whether this cell has been visited
+        exploration_bonus = self.exploration_bonus if tuple(next_position) not in self.visited_cells else 0
         
         return observation_area + exploration_bonus
 
@@ -199,13 +159,8 @@ class Drone:
         """
         Compute Q-value for an action using Dec-POMDP value function
         Q(b, a) = R(b, a) + gamma * V(b')
-        
-        Args:
-            action: integer action (0-5)
-            
-        Returns:
-            float: Q-value for the action
         """
+        # Simulate action
         x, y = self.x, self.y
         
         if action == 0:  # Stay
@@ -223,49 +178,56 @@ class Drone:
             x = min(self.grid_size - 1, x + 1)
             next_position = np.array([x, y])
         elif action == 5:  # Communicate
+            # High cost but reduces uncertainty
             current_entropy = self.belief_state.get_entropy()
-            comm_value = -10.0 + 5.0 * current_entropy
+            comm_value = -10.0 + 5.0 * current_entropy  # Worth it if entropy is high
             return comm_value
         else:
             next_position = np.array([x, y])
         
-        # If fire is found, value based on distance to fire
+        # If fire is found, value is based on distance to fire
         if self.belief_state.fire_found and self.belief_state.fire_location is not None:
-            distance_to_fire = np.abs(next_position - 
-                                     self.belief_state.fire_location).sum()
+            distance_to_fire = np.abs(next_position - self.belief_state.fire_location).sum()
+            # High reward for reaching fire, discounted by distance
             if distance_to_fire == 0:
                 return 100.0  # Huge reward for extinguishing
             else:
-                return 10.0 - distance_to_fire
+                return 10.0 - distance_to_fire  # Move closer to fire
         
-        # Otherwise, value based on information gain
+        # Otherwise, value is based on information gain
         info_gain = self.compute_information_gain(next_position)
+        
+        # Penalty for movement cost
         movement_cost = 1.0 if action != 0 else 0.0
+        
+        # Q-value combines information gain and cost
         q_value = info_gain - movement_cost
         
         return q_value
 
     def should_communicate(self):
         """
-        Decide whether to communicate based on entropy and timing
-        
-        Returns:
-            bool: True if should communicate, False otherwise
+        Decide whether to communicate based on:
+        1. Belief entropy (uncertainty)
+        2. Time since last communication
+        3. Whether we found the fire
         """
+        # Communicate periodically
         time_step = int(self.time / self.dt)
         
-        # If fire found, communicate periodically
+        # If fire found, communicate immediately and then periodically
         if self.belief_state.fire_found:
-            if time_step % 10 == 0:
+            if time_step % 10 == 0:  # Every 10 steps after finding fire
                 return True
         
-        # During search, communicate less frequently
+        # During search, communicate less frequently (every 30 steps)
+        # This allows time for exploration between communications
         if time_step > 0 and time_step % 30 == 0:
             current_entropy = self.belief_state.get_entropy()
             max_entropy = np.log(self.grid_size * self.grid_size)
-            normalized_entropy = (current_entropy / max_entropy 
-                                if max_entropy > 0 else 0)
+            normalized_entropy = current_entropy / max_entropy if max_entropy > 0 else 0
             
+            # Only communicate if entropy is still high
             if normalized_entropy > self.communication_threshold:
                 return True
         
@@ -274,30 +236,26 @@ class Drone:
     def decide_action_pomdp(self):
         """
         Dec-POMDP decision making using value iteration
-        
-        Returns:
-            int: chosen action (0-5)
         """
         # If at fire location, stay
-        if (self.belief_state.fire_found and 
-            self.belief_state.fire_location is not None):
-            if (self.x == self.belief_state.fire_location[0] and 
-                self.y == self.belief_state.fire_location[1]):
+        if self.belief_state.fire_found and self.belief_state.fire_location is not None:
+            if self.x == self.belief_state.fire_location[0] and self.y == self.belief_state.fire_location[1]:
                 return 0
         
-        # Check if should communicate
+        # Check if we should communicate (but don't let it block movement)
         if self.should_communicate():
             return 5
         
-        # Compute Q-values for all movement actions
+        # Compute Q-values for all movement actions (0-4)
         q_values = {}
         for action in range(5):
             q_values[action] = self.compute_q_value(action)
         
-        # Debug output
-        # if int(self.time / self.dt) % 10 == 0:
-        #     print(f"Drone {self.drone_id} Q-values: {q_values}")
+        # Debug print
+        if int(self.time / self.dt) % 10 == 0:
+            print(f"Drone {self.drone_id} Q-values: {q_values}")
         
+        # Select action with highest Q-value (exclude stay unless at fire)
         # Prioritize movement during exploration
         if not self.belief_state.fire_found:
             movement_q_values = {a: q for a, q in q_values.items() if a != 0}
@@ -306,6 +264,7 @@ class Drone:
             else:
                 best_action = max(q_values, key=q_values.get)
         else:
+            # After fire found, can stay if needed
             best_action = max(q_values, key=q_values.get)
         
         if int(self.time / self.dt) % 10 == 0:
@@ -314,16 +273,7 @@ class Drone:
         return best_action
 
     def action(self, action, fire_pos):
-        """
-        Execute action and update state
-        
-        Args:
-            action: integer action (0-5)
-            fire_pos: actual fire position
-            
-        Returns:
-            dict or None: telemetry packet if communicating, else None
-        """
+        """Execute action and update state"""
         x = self.x
         y = self.y
         

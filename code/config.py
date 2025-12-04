@@ -4,7 +4,7 @@ Centralized place for all simulation parameters
 """
 
 # Environment parameters
-GRID_SIZE = 10  # Size of the NxN grid
+GRID_SIZE = 15  # Size of the NxN grid
 
 # Drone parameters
 NUM_DRONES = 2
@@ -19,11 +19,11 @@ RENDER_PAUSE = 0.1
 
 # Dec-POMDP parameters
 GAMMA = 0.95
-COMMUNICATION_THRESHOLD = 0.3
+COMMUNICATION_THRESHOLD = 0.0
 EXPLORATION_BONUS = 2.0  # Bonus reward for exploring new cells, promotes active exploration of new cells
 
 # Cost parameters
-COMMUNICATION_COST = 10.0
+COMMUNICATION_COST = 0.0
 MOVEMENT_COST = 1.0
 STAY_COST = 0.0
 
@@ -32,10 +32,10 @@ COMMUNICATION_NOISE = 0.05
 UNCERTAINTY_GROWTH_RATE = 0.1
 
 # Rendering parameters
-FIGURE_SIZE = (10, 10)  # Size of the matplotlib figure
+FIGURE_SIZE = (7, 7)  # Size of the matplotlib figure
 GRID_COLORS = ['white', 'red', 'blue', 'green', 'orange', 'purple']  # Cell colors
 WINDOW_EDGE_COLOR = 'black'
-WINDOW_LINE_WIDTH = 2
+WINDOW_LINE_WIDTH = 3
 
 
 def get_environment_config():
