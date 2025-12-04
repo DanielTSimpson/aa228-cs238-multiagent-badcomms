@@ -18,15 +18,15 @@ class SearchEnv(Env):
         self.fig, self.ax = None, None
         self.fire_pos = np.random.randint(0, self.grid_size, size=2)
         self.patches = []
-        self.communication_cost = 10.0
-        self.movement_cost = 1.0
+        self.communication_cost = cfg.COMMUNICATION_COST
+        self.movement_cost = cfg.MOVEMENT_COST
         self.total_cost = 0.0
         self.fire_extinguished = False
         self.time_to_extinguish = None
         self.total_communications = 0
 
         # Per-step time penalty parameter for global reward function
-        self.kappa = 0.0
+        self.kappa = cfg.TIME_COST
 
     def step(self, drones, actions):
         """Execute actions, handle communication, and compute global reward."""

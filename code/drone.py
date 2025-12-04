@@ -38,14 +38,14 @@ class Drone():
                 self.beliefs[i] = {
                     'position': np.array([grid_size // 2, grid_size // 2]),
                     'belief_state': BeliefState(grid_size),
-                    'last_update_time': 0.0,
+                    'last_update_time': cfg.INITIAL_TIME,
                     'uncertainty': 1.0
                 }
         
         # Dec-POMDP parameters
-        self.gamma = 0.95  # Discount factor
-        self.communication_threshold = 0.3  # Communicate when uncertainty is high
-        self.exploration_bonus = 2.0  # Bonus for exploring new cells, promotes drones to move in unexplored directions
+        self.gamma = cfg.GAMMA  # Discount factor
+        self.communication_threshold = cfg.COMMUNICATION_THRESHOLD  # Communicate when uncertainty is high
+        self.exploration_bonus = cfg.EXPLORATION_BONUS # Bonus for exploring new cells, promotes drones to move in unexplored directions
 
     @property
     def x(self):
@@ -130,7 +130,7 @@ class Drone():
         """Update beliefs about other drones over time"""
         for drone_id in self.beliefs:
             time_since_update = self.time - self.beliefs[drone_id]['last_update_time']
-            uncertainty_growth_rate = 0.1
+            uncertainty_growth_rate = cfg.UNCERTAINTY_GROWTH_RATE
             self.beliefs[drone_id]['uncertainty'] = min(1.0, 
                 self.beliefs[drone_id]['uncertainty'] + uncertainty_growth_rate * dt)
 
@@ -163,27 +163,19 @@ class Drone():
         # Simulate action
         x, y = self.x, self.y
         
-        if action == 0:  # Stay
-            next_position = np.array([x, y])
-        elif action == 1:  # Up
+        if action == 1:  # Up
             y = min(self.grid_size - 1, y + 1)
-            next_position = np.array([x, y])
         elif action == 2:  # Down
             y = max(0, y - 1)
-            next_position = np.array([x, y])
         elif action == 3:  # Left
             x = max(0, x - 1)
-            next_position = np.array([x, y])
         elif action == 4:  # Right
             x = min(self.grid_size - 1, x + 1)
-            next_position = np.array([x, y])
         elif action == 5:  # Communicate
-            # High cost but reduces uncertainty
             current_entropy = self.belief_state.get_entropy()
-            comm_value = -10.0 + 5.0 * current_entropy  # Worth it if entropy is high
+            comm_value = -10.0 + 5.0 * current_entropy
             return comm_value
-        else:
-            next_position = np.array([x, y])
+        next_position = np.array([x, y])
         
         # If fire is found, value is based on distance to fire
         if self.belief_state.fire_found and self.belief_state.fire_location is not None:
@@ -198,7 +190,7 @@ class Drone():
         info_gain = self.compute_information_gain(next_position)
         
         # Penalty for movement cost
-        movement_cost = 1.0 if action != 0 else 0.0
+        movement_cost = cfg.MOVEMENT_COST if action != 0 else 0.0
         
         # Q-value combines information gain and cost
         q_value = info_gain - movement_cost
