@@ -39,7 +39,8 @@ class Drone():
                     'position': np.array([grid_size // 2, grid_size // 2]),
                     'belief_state': BeliefState(grid_size),
                     'last_update_time': cfg.INITIAL_TIME,
-                    'uncertainty': 1.0
+                    'uncertainty': 1.0,
+                    'visited_cells': set()  # **NEW: Track other drone's visited cells**
                 }
         
         # Dec-POMDP parameters
@@ -116,6 +117,11 @@ class Drone():
         self.beliefs[sender_id]['belief_state'] = packet['belief_state']
         self.beliefs[sender_id]['last_update_time'] = packet['timestamp']
         self.beliefs[sender_id]['uncertainty'] = communication_noise
+        self.beliefs[sender_id]['visited_cells'] = packet['visited_cells'].copy()
+
+        other_visited = packet['visited_cells']
+        num_new_cells = len(other_visited - self.visited_cells)
+        self.visited_cells.update(other_visited)
         
         # Merge belief states
         old_entropy = self.belief_state.get_entropy()
@@ -124,6 +130,7 @@ class Drone():
         
         print(f"  Belief Entropy: {old_entropy:.3f} → {new_entropy:.3f}")
         print(f"  Uncertainty: {old_uncertainty:.2f} → {communication_noise:.2f}")
+        print(f"  **Learned {num_new_cells} new visited cells from Drone {sender_id}**")
         print(f"{'─'*60}\n")
 
     def update_beliefs(self, dt):
@@ -139,7 +146,6 @@ class Drone():
         Compute expected information gain from moving to next_position
         Based on reduction in belief entropy
         """
-        # Simulate observation at next position
         temp_belief = deepcopy(self.belief_state.belief)
         x, y = next_position
         
@@ -149,18 +155,20 @@ class Drone():
             for j in range(max(0, y - self.window_size // 2), min(self.grid_size, y + self.window_size // 2 + 1)):
                 observation_area += temp_belief[i, j]
         
-        # Information gain is proportional to probability mass in observation area
-        # and whether this cell has been visited
-        exploration_bonus = self.exploration_bonus if tuple(next_position) not in self.visited_cells else 0
+        # Check if ANY drone has visited this cell (including us)
+        cell_visited_by_anyone = tuple(next_position) in self.visited_cells
+        
+        # Double bonus for completely unexplored cells
+        exploration_bonus = self.exploration_bonus if not cell_visited_by_anyone else 0
         
         return observation_area + exploration_bonus
-
     def compute_q_value(self, action):
         """
         Compute Q-value for an action using Dec-POMDP value function
         Q(b, a) = R(b, a) + gamma * V(b')
+        
         """
-        # Simulate action
+        # Simulate movement actions
         x, y = self.x, self.y
         
         if action == 1:  # Up
@@ -171,32 +179,22 @@ class Drone():
             x = max(0, x - 1)
         elif action == 4:  # Right
             x = min(self.grid_size - 1, x + 1)
-        #elif action == 5:  # Communicate
-        #    current_entropy = self.belief_state.get_entropy()
-        #    comm_value = -10.0 + 5.0 * current_entropy
-        #    return comm_value
+        
         next_position = np.array([x, y])
         
         # If fire is found, value is based on distance to fire
         if self.belief_state.fire_found and self.belief_state.fire_location is not None:
             distance_to_fire = np.abs(next_position - self.belief_state.fire_location).sum()
-            # High reward for reaching fire, discounted by distance
             if distance_to_fire == 0:
                 return 100.0  # Huge reward for extinguishing
             else:
-                return 10.0 - distance_to_fire  # Move closer to fire
+                return 10.0 - distance_to_fire
         
         # Otherwise, value is based on information gain
         info_gain = self.compute_information_gain(next_position)
-        
-        # Penalty for movement cost
         movement_cost = cfg.MOVEMENT_COST if action != 0 else 0.0
         
-        # Penalty for communication cost
-        comms_cost = cfg.COMMUNICATION_COST if action == 5 else 0.0
-
-        # Q-value combines information gain and cost
-        q_value = info_gain - movement_cost - comms_cost
+        q_value = info_gain - movement_cost
         
         return q_value
 
@@ -231,28 +229,44 @@ class Drone():
     def decide_action_pomdp(self):
         """
         Dec-POMDP decision making using value iteration
+        
+        Returns:
+            int: chosen action (0-5)
         """
         # If at fire location, stay
         if self.belief_state.fire_found and self.belief_state.fire_location is not None:
             if self.x == self.belief_state.fire_location[0] and self.y == self.belief_state.fire_location[1]:
                 return 0
         
-        # Check if we should communicate (but don't let it block movement)
-       # if self.should_communicate():
-       #     return 5
+        # First we dcedie if we should communicate based on entropy/cost tradeoff
+        current_entropy = self.belief_state.get_entropy()
+        max_entropy = np.log(self.grid_size * self.grid_size)
+        normalized_entropy = current_entropy / max_entropy if max_entropy > 0 else 0
         
-        # Compute Q-values for all movement actions (0-4)
+        # Communication value: benefit of sharing info vs cost
+        comm_value = 5.0 * normalized_entropy - cfg.COMMUNICATION_COST
+        
+        # Communicate if it has positive value AND we haven't communicated too recently
+        time_step = int(self.time / self.dt)
+        MIN_COMM_INTERVAL = cfg.MIN_COMM_INTERVAL  # Minimum steps between communications
+        
+        if comm_value > 0 and time_step % MIN_COMM_INTERVAL == 0:
+            if int(self.time / self.dt) % 10 == 0:
+                print(f"Drone {self.drone_id} chose action: 5 (communicate), comm_value={comm_value:.2f}")
+            return 5
+        
+        # Then if not communicating, compute Q-values for movement actions only
         q_values = {}
-        for action in range(6):
+        for action in range(5):  # 0-4: stay and movement
             q_values[action] = self.compute_q_value(action)
         
-        # Debug print
+        # Debug print statement but kinda looks cool when logging in terminal lmao
         if int(self.time / self.dt) % 10 == 0:
             print(f"Drone {self.drone_id} Q-values: {q_values}")
         
-        # Select action with highest Q-value (exclude stay unless at fire)
-        # Prioritize movement during exploration
+        # Select best movement action
         if not self.belief_state.fire_found:
+            # During search, exclude stay action
             movement_q_values = {a: q for a, q in q_values.items() if a != 0}
             if movement_q_values:
                 best_action = max(movement_q_values, key=movement_q_values.get)
@@ -263,7 +277,7 @@ class Drone():
             best_action = max(q_values, key=q_values.get)
         
         if int(self.time / self.dt) % 10 == 0:
-            print(f"Drone {self.drone_id} chose action: {best_action}")
+            print(f"Drone {self.drone_id} chose action: {best_action} (movement)")
         
         return best_action
 
