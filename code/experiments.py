@@ -86,14 +86,14 @@ def run_simulation(grid_size=10, num_drones=2, t_f=10, dt=0.05,
     #fig = env.render(drones)
     #plt.savefig("InitialPositions.png")
     for i in range(N):
-        #fig = env.render(drones)
+        fig = env.render(drones)
         plt.pause(0.1)
         
         if env.fire_extinguished:
             print(f"Fire extinguished! Showing final state...")
-            #for j in range(10):
-                #fig = env.render(drones)
-                #plt.pause(0.2)
+            for j in range(10):
+                fig = env.render(drones)
+                plt.pause(0.2)
             break
         
         # Dec-POMDP decision making

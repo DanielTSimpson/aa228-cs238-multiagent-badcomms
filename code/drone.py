@@ -171,10 +171,10 @@ class Drone():
             x = max(0, x - 1)
         elif action == 4:  # Right
             x = min(self.grid_size - 1, x + 1)
-        elif action == 5:  # Communicate
-            current_entropy = self.belief_state.get_entropy()
-            comm_value = -10.0 + 5.0 * current_entropy
-            return comm_value
+        #elif action == 5:  # Communicate
+        #    current_entropy = self.belief_state.get_entropy()
+        #    comm_value = -10.0 + 5.0 * current_entropy
+        #    return comm_value
         next_position = np.array([x, y])
         
         # If fire is found, value is based on distance to fire
@@ -192,8 +192,11 @@ class Drone():
         # Penalty for movement cost
         movement_cost = cfg.MOVEMENT_COST if action != 0 else 0.0
         
+        # Penalty for communication cost
+        comms_cost = cfg.COMMUNICATION_COST if action == 5 else 0.0
+
         # Q-value combines information gain and cost
-        q_value = info_gain - movement_cost
+        q_value = info_gain - movement_cost - comms_cost
         
         return q_value
 
@@ -235,12 +238,12 @@ class Drone():
                 return 0
         
         # Check if we should communicate (but don't let it block movement)
-        if self.should_communicate():
-            return 5
+       # if self.should_communicate():
+       #     return 5
         
         # Compute Q-values for all movement actions (0-4)
         q_values = {}
-        for action in range(5):
+        for action in range(6):
             q_values[action] = self.compute_q_value(action)
         
         # Debug print
