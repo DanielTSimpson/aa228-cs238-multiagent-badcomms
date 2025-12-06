@@ -23,9 +23,10 @@ COMMUNICATION_THRESHOLD = 0.2
 EXPLORATION_BONUS = 2.0  # Bonus reward for exploring new cells, promotes active exploration of new cells
 
 # Cost parameters
-COMMUNICATION_COST = 10.0
-MOVEMENT_COST = 2.0
-TIME_COST = 1.0 # AKA KAPPA
+COMMUNICATION_COST = 100.0
+MOVEMENT_COST = 1.0
+# (UNUSED) STAY_COST = 0.0
+TIME_COST = 0.0 # AKA KAPPA
 
 # Communication parameters
 COMMUNICATION_NOISE = 0.05

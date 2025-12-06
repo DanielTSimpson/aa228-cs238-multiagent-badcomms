@@ -20,6 +20,7 @@ class SearchEnv(Env):
         self.patches = []
         self.communication_cost = cfg.COMMUNICATION_COST
         self.movement_cost = cfg.MOVEMENT_COST
+        self.time_cost = cfg.TIME_COST
         self.total_cost = 0.0
         self.fire_extinguished = False
         self.time_to_extinguish = None
@@ -60,7 +61,7 @@ class SearchEnv(Env):
                     self.fire_extinguished = True
                     self.time_to_extinguish = drone.time
                     total_step_cost = (
-                        step_movement_cost + self.communication_cost * comm_count
+                        step_movement_cost + self.communication_cost * comm_count + self.time_cost
                     )
                     print(f"FIRE EXTINGUISHED by Drone {drone.drone_id}!")
                     print(f"Time: {drone.time:.2f}s")
@@ -70,10 +71,13 @@ class SearchEnv(Env):
                     print(
                         f"Communications: {self.total_communications + comm_count}"
                     )
+                    print(
+                        f"Time: {self.time_cost}"
+                    )
 
         # Accumulate “real” costs for logging
         self.total_communications += comm_count
-        self.total_cost += step_movement_cost + self.communication_cost * comm_count
+        self.total_cost += step_movement_cost + self.communication_cost * comm_count + self.time_cost
 
         # 4) Team belief AFTER actions + communication
         next_belief = self._get_team_belief(drones)

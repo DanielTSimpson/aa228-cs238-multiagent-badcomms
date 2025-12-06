@@ -68,6 +68,7 @@ def run_simulation(grid_size=10, num_drones=2, t_f=10, dt=0.05,
     entropy_drone1 = []
     entropy_drone2 = []
     time = []
+    rewards = []
 
     env = SearchEnv(grid_size=grid_size)
     env.fire_pos = np.array([grid_size - 2, grid_size - 2])
@@ -82,18 +83,21 @@ def run_simulation(grid_size=10, num_drones=2, t_f=10, dt=0.05,
     drones = [Drone1, Drone2]
     
     print_initial_config(env, drones)
+    RENDER_LIVE = False
     
     #fig = env.render(drones)
     #plt.savefig("InitialPositions.png")
     for i in range(N):
-        fig = env.render(drones)
-        plt.pause(0.1)
-        
+        if RENDER_LIVE:
+            fig = env.render(drones)
+            plt.pause(0.1)
+            
         if env.fire_extinguished:
             print(f"Fire extinguished! Showing final state...")
-            for j in range(10):
-                fig = env.render(drones)
-                plt.pause(0.2)
+            if RENDER_LIVE:
+                for j in range(10):
+                    fig = env.render(drones)
+                    plt.pause(0.2)
             break
         
         # Dec-POMDP decision making
@@ -112,6 +116,7 @@ def run_simulation(grid_size=10, num_drones=2, t_f=10, dt=0.05,
         entropy_drone1.append(Drone1.belief_state.get_entropy())
         entropy_drone2.append(Drone2.belief_state.get_entropy())
         time.append(dt * i)
+        rewards.append(reward)
 
     # Print final results
     print_final_results(env)
@@ -167,13 +172,13 @@ def plot_results(entropy1, entropy2, time, final_time, total_cost, total_comms, 
     plt.tight_layout()
     
     #plt.show(block=True)
-    plt.savefig(f"ConfigResults_{N}.png")
+    plt.savefig(f"{filename_prefix}Results_{N}.png") 
     plt.close(fig)
 
 
 
 if __name__ == '__main__':
-    max_N = 30
+    max_N = 100
     filename_prefix = "Config_"
     csv_filename = filename_prefix + 'results.csv'
     fieldnames = ['Trial #', 'Total Time', '# Comms', 'Total Cost']
@@ -191,9 +196,8 @@ if __name__ == '__main__':
             status_interval=cfg.STATUS_UPDATE_INTERVAL,
             render_pause=cfg.RENDER_PAUSE
         )
-
+    
         plot_results(entropy_drone1, entropy_drone2, time, final_time, total_cost, total_comms, i, filename_prefix)
-
         if final_time is not None:
             time_val = round(final_time, 2)
         else:
@@ -204,10 +208,12 @@ if __name__ == '__main__':
         with open(csv_filename, mode='a', newline='') as file:
             writer = csv.DictWriter(file, fieldnames=fieldnames)
             writer.writerow({
-                'Trial #': i, 
+                'Trial #': i,
                 'Total Time': time_val, 
                 '# Comms': total_comms, 
                 'Total Cost': cost_val
             })
             
         print(f"Trial {i} saved to {csv_filename}")
+    import showNormals
+    showNormals.run()

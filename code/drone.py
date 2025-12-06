@@ -194,7 +194,7 @@ class Drone():
         info_gain = self.compute_information_gain(next_position)
         movement_cost = cfg.MOVEMENT_COST if action != 0 else 0.0
         
-        q_value = info_gain - movement_cost
+        q_value = info_gain - movement_cost - cfg.TIME_COST # Added time cost to hasten our drones. May be erroneous
         
         return q_value
 

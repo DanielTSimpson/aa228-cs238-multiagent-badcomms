@@ -7,7 +7,7 @@ Centralized place for all simulation parameters
 GRID_SIZE = 15  # Size of the NxN grid
 
 # Drone parameters
-NUM_DRONES = 2
+NUM_DRONES = 1
 OBSERVATION_WINDOW_SIZE = 3
 INITIAL_TIME = 0.0
 TIME_STEP = 0.05
@@ -23,7 +23,7 @@ COMMUNICATION_THRESHOLD = 0.2
 EXPLORATION_BONUS = 2.0  # Bonus reward for exploring new cells, promotes active exploration of new cells
 
 # Cost parameters
-COMMUNICATION_COST = 10.0
+COMMUNICATION_COST = 3.0
 MOVEMENT_COST = 2.0
 TIME_COST = 1.0 # AKA KAPPA
 
