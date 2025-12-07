@@ -9,7 +9,7 @@ from environment import SearchEnv
 import config as cfg
 
 
-def initialize_drones(num_drones, grid_size, env, t_0=0):
+def initialize_drones(num_drones, grid_size, env, t_0=0, obs_window_size=3):
     """
     Initialize drones at random positions that don't see the fire initially
     
@@ -25,11 +25,11 @@ def initialize_drones(num_drones, grid_size, env, t_0=0):
     drones = []
     for drone_id in range(num_drones):
         drone = Drone(drone_id=drone_id, grid_size=grid_size, 
-                     num_drones=num_drones, time=t_0)
+                     num_drones=num_drones, time=t_0, window_size=obs_window_size)
         # Reshuffle if drone starts at the same loc as fire
         while drone.observe(env.fire_pos):
             drone = Drone(drone_id=drone_id, grid_size=grid_size, 
-                         num_drones=num_drones, time=t_0)
+                         num_drones=num_drones, time=t_0, window_size=obs_window_size)
         drones.append(drone)
     return drones
 
@@ -86,13 +86,16 @@ def run_simulation(grid_size=10, num_drones=2, t_f=10, dt=0.05,
         status_interval: steps between status updates
         render_pause: pause duration for rendering (seconds)
     """
-    t_0 = 0
+    t_0 = cfg.INITIAL_TIME
+    dt = cfg.TIME_STEP
+    t_f = cfg.MAX_SIMULATION_TIME
+    window_size = cfg.OBSERVATION_WINDOW_SIZE
     N = int((t_f - t_0) / dt)
     print(f"Max {N} time steps (Dec-POMDP with Value Iteration)")
 
     # Initialize environment and drones
     env = SearchEnv(grid_size=grid_size)
-    drones = initialize_drones(num_drones, grid_size, env, t_0)
+    drones = initialize_drones(num_drones, grid_size, env, t_0, obs_window_size=window_size)
     
     print_initial_config(env, drones)
     

@@ -23,14 +23,14 @@ COMMUNICATION_THRESHOLD = 0.2
 EXPLORATION_BONUS = 2.0  # Bonus reward for exploring new cells, promotes active exploration of new cells
 
 # Cost parameters
-COMMUNICATION_COST = 10.0
-MOVEMENT_COST = 2.0
-TIME_COST = 1.0 # AKA KAPPA
+COMMUNICATION_COST = 100.0
+MOVEMENT_COST = 1.0
+# (UNUSED) STAY_COST = 0.0
+TIME_COST = 0.0
 
 # Communication parameters
 COMMUNICATION_NOISE = 0.05
 UNCERTAINTY_GROWTH_RATE = 0.1
-MIN_COMM_INTERVAL = 5 # Can change this, basically is a threshold that prevents drones from just spam communicating
 
 # Rendering parameters
 FIGURE_SIZE = (7, 7)  # Size of the matplotlib figure
